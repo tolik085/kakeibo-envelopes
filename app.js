@@ -3,20 +3,41 @@
  * Interactive Web Application
  */
 
+const CURRENT_DATA_VERSION = 'v2_photo_debts';
+
+const DEFAULT_DEBTS = [
+    { id: 1, name: "xbox", balance: 305, rate: 0, payment: 100 },
+    { id: 2, name: "tv bybit", balance: 1061, rate: 0, payment: 100 },
+    { id: 3, name: "miska", balance: 217, rate: 0, payment: 15 },
+    { id: 4, name: "telefon", balance: 383, rate: 0, payment: 40 },
+    { id: 5, name: "saat", balance: 1217, rate: 0, payment: 85 },
+    { id: 6, name: "xiaomi fryer", balance: 500, rate: 0, payment: 35 },
+    { id: 7, name: "disk", balance: 940, rate: 0, payment: 100 },
+    { id: 8, name: "protein", balance: 70, rate: 0, payment: 50 },
+    { id: 9, name: "bir kart", balance: 290, rate: 0, payment: 200 },
+    { id: 10, name: "mama kart", balance: 225, rate: 0, payment: 200 },
+    { id: 11, name: "nomre", balance: 22, rate: 0, payment: 22 },
+    { id: 12, name: "internet", balance: 25, rate: 0, payment: 25 },
+    { id: 13, name: "mamed", balance: 1870, rate: 0, payment: 340 },
+    { id: 14, name: "gpu", balance: 2875, rate: 0, payment: 200 },
+    { id: 15, name: "ssd", balance: 380, rate: 0, payment: 35 },
+    { id: 16, name: "ev", balance: 300, rate: 0, payment: 300 },
+    { id: 17, name: "claud bybit", balance: 170, rate: 0, payment: 170 }
+];
+
 // Application State
 let appState = {
+    version: CURRENT_DATA_VERSION,
     currency: '₼',
     currencyCode: 'AZN',
-    debts: [
-        { id: 1, name: "Кредитна картка", balance: 2000, rate: 25, payment: 100 }
-    ],
+    debts: JSON.parse(JSON.stringify(DEFAULT_DEBTS)),
     extraPay: 150,
     strategy: 'snowball',
     budget: {
-        inc1: 800,
-        inc2: 400,
-        needs: 700,
-        goal: 150,
+        inc1: 1500,
+        inc2: 1200,
+        needs: 500,
+        goal: 2017,
         p_wants: 40,
         p_dev: 20,
         p_unexp: 40
@@ -197,6 +218,21 @@ function renderDebtsList() {
     });
 
     lucide.createIcons();
+    updateDebtsSummaryStats();
+}
+
+function updateDebtsSummaryStats() {
+    const totalCount = appState.debts.length;
+    const totalBalance = appState.debts.reduce((sum, d) => sum + (Number(d.balance) || 0), 0);
+    const totalPayment = appState.debts.reduce((sum, d) => sum + (Number(d.payment) || 0), 0);
+
+    const countEl = document.getElementById('total-debts-count');
+    const balEl = document.getElementById('total-debts-balance');
+    const payEl = document.getElementById('total-debts-payment');
+
+    if (countEl) countEl.textContent = totalCount;
+    if (balEl) balEl.textContent = formatMoney(totalBalance);
+    if (payEl) payEl.textContent = `${formatMoney(totalPayment)}/міс`;
 }
 
 function addDebtItem() {
@@ -204,9 +240,9 @@ function addDebtItem() {
     appState.debts.push({
         id: newId,
         name: `Кредит #${appState.debts.length + 1}`,
-        balance: 3000,
-        rate: 18,
-        payment: 150
+        balance: 500,
+        rate: 0,
+        payment: 50
     });
     renderDebtsList();
     saveToLocalStorage();
@@ -223,6 +259,7 @@ function updateDebt(id, field, value) {
     const debt = appState.debts.find(d => d.id === id);
     if (debt) {
         debt[field] = value;
+        updateDebtsSummaryStats();
         saveToLocalStorage();
     }
 }
@@ -393,7 +430,9 @@ function calcDebts(triggerConfetti = true) {
                 </div>
                 <div class="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-sm">
                     <span class="text-xs text-slate-500 block">Загальна переплата за %:</span>
-                    <span class="text-lg font-extrabold text-rose-700">${formatMoney(activeRes.totalInterest)}</span>
+                    <span class="text-lg font-extrabold ${activeRes.totalInterest === 0 ? 'text-emerald-700' : 'text-rose-700'}">
+                        ${activeRes.totalInterest === 0 ? '0 ' + appState.currency + ' (0% переплат)' : formatMoney(activeRes.totalInterest)}
+                    </span>
                 </div>
                 <div class="bg-white p-3.5 rounded-xl border border-emerald-100 shadow-sm">
                     <span class="text-xs text-slate-500 block">Щомісячний прискорювач:</span>
@@ -707,38 +746,23 @@ function loadFromLocalStorage() {
         const saved = localStorage.getItem('kakeibo_app_state');
         if (saved) {
             const parsed = JSON.parse(saved);
-            appState = { ...appState, ...parsed };
-            // Ensure array has elements
-            if (!Array.isArray(appState.debts) || appState.debts.length === 0) {
-                appState.debts = [{ id: 1, name: "Кредитна картка", balance: 2000, rate: 25, payment: 100 }];
+            if (parsed.version === CURRENT_DATA_VERSION && Array.isArray(parsed.debts) && parsed.debts.length > 0) {
+                appState = { ...appState, ...parsed };
+                return;
             }
         }
     } catch (e) {
         console.warn('LocalStorage load failed:', e);
     }
+    // Initialize with photo debts
+    appState.version = CURRENT_DATA_VERSION;
+    appState.debts = JSON.parse(JSON.stringify(DEFAULT_DEBTS));
+    saveToLocalStorage();
 }
 
 function resetToDefaults() {
-    if (confirm("Скинути всі дані та налаштування до початкових значень?")) {
+    if (confirm("Скинути всі дані та налаштування до початкових значень зі списку?")) {
         localStorage.removeItem('kakeibo_app_state');
-        appState = {
-            currency: '₼',
-            currencyCode: 'AZN',
-            debts: [
-                { id: 1, name: "Кредитна картка", balance: 2000, rate: 25, payment: 100 }
-            ],
-            extraPay: 150,
-            strategy: 'snowball',
-            budget: {
-                inc1: 800,
-                inc2: 400,
-                needs: 700,
-                goal: 150,
-                p_wants: 40,
-                p_dev: 20,
-                p_unexp: 40
-            }
-        };
         location.reload();
     }
 }
