@@ -1,0 +1,20 @@
+{
+  "name": "kakeibo-budget-and-debt-app",
+  "version": "1.0.0",
+  "description": "Японські конверти Kakeibo та інтерактивний калькулятор виплати боргів (Снігова куля та Лавина)",
+  "main": "server.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "keywords": [
+    "kakeibo",
+    "budget",
+    "envelope-budgeting",
+    "debt-snowball",
+    "debt-avalanche",
+    "financial-calculator"
+  ],
+  "author": "",
+  "license": "MIT"
+}

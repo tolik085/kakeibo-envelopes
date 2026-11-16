@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kakeibo · Японські конверти та калькулятор боргів</title>
+    <meta name="description" content="Японська система конвертів (Kakeibo) та розумний калькулятор погашення боргів за стратегіями Снігова куля і Лавина.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>✉️</text></svg>">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Noto+Serif+JP:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+                        serif: ['"Noto Serif JP"', 'serif'],
+                    },
+                    colors: {
+                        zen: {
+                            bg: '#FBF9F5',
+                            card: '#FFFFFF',
+                            border: '#E8E3D9',
+                            dark: '#1E242B',
+                            muted: '#68727D',
+                            brown: '#C58958',
+                            pink: '#D87A89',
+                            green: '#5B8C67',
+                            blue: '#477C98',
+                            gold: '#D6942C'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-[#FBF9F5] text-slate-800 font-sans min-h-screen antialiased flex flex-col selection:bg-amber-100 selection:text-amber-900">
+
+    <!-- Sticky Navigation Bar -->
+    <header class="sticky top-0 z-50 bg-[#FBF9F5]/90 backdrop-blur-md border-b border-[#E8E3D9] transition-all">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between py-3">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-600 to-amber-800 text-white flex items-center justify-center shadow-md shadow-amber-900/10">
+                    <span class="font-serif text-lg font-bold">家</span>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl font-bold tracking-tight text-slate-900">Kakeibo</span>
+                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">家計簿</span>
+                    </div>
+                    <p class="text-xs text-slate-500 hidden sm:block">Японські конверти та калькулятор фінансів</p>
+                </div>
+            </div>
+
+            <!-- Quick Navigation Menu -->
+            <nav class="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-600">
+                <a href="#theory" class="hover:text-amber-700 transition-colors">Філософія</a>
+                <a href="#strategy-test" class="hover:text-amber-700 transition-colors">Тест</a>
+                <a href="#debt-calc" class="hover:text-amber-700 transition-colors">Борги</a>
+                <a href="#budget-calc" class="hover:text-amber-700 transition-colors">Бюджет</a>
+                <a href="#envelopes-view" class="hover:text-amber-700 transition-colors">Конверти</a>
+            </nav>
+
+            <!-- Actions: Currency & Controls -->
+            <div class="flex items-center space-x-2 sm:space-x-3">
+                <!-- Currency Selector -->
+                <div class="relative">
+                    <select id="currency-select" class="appearance-none bg-white text-xs sm:text-sm font-semibold border border-slate-300 rounded-lg pl-3 pr-8 py-2 text-slate-700 hover:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20 shadow-sm cursor-pointer transition">
+                        <option value="₼" data-code="AZN">₼ AZN (Манат)</option>
+                        <option value="₴" data-code="UAH">₴ UAH (Гривня)</option>
+                        <option value="$" data-code="USD">$ USD (Долар)</option>
+                        <option value="€" data-code="EUR">€ EUR (Євро)</option>
+                        <option value="zł" data-code="PLN">zł PLN (Злотий)</option>
+                    </select>
+                    <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                </div>
+
+                <!-- Print / Export Button -->
+                <button onclick="window.print()" title="Роздрукувати або зберегти в PDF" class="p-2 sm:px-3 sm:py-2 text-xs sm:text-sm bg-white hover:bg-slate-50 border border-slate-300 rounded-lg text-slate-700 font-medium flex items-center gap-1.5 shadow-sm transition">
+                    <i data-lucide="printer" class="w-4 h-4 text-slate-500"></i>
+                    <span class="hidden sm:inline">Друк/PDF</span>
+                </button>
+
+                <!-- Reset Data Button -->
+                <button onclick="resetToDefaults()" title="Скинути дані до початкових" class="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition" aria-label="Скинути">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-12 flex-1">
+
+        <!-- Hero Banner -->
+        <section class="text-center space-y-4 max-w-3xl mx-auto pt-2 sm:pt-4">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/80 text-amber-800 text-xs font-semibold tracking-wide uppercase">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-600"></i>
+                Фінансова усвідомленість без стресу
+            </div>
+            <h1 class="text-3xl sm:text-5xl font-extrabold text-slate-900 tracking-tight leading-tight">
+                Японські конверти
+                <span class="block text-xl sm:text-2xl font-serif text-amber-800 mt-2 font-normal">
+                    Мистецтво керування бюджетом та звільнення від боргів
+                </span>
+            </h1>
+            <p class="text-slate-600 text-sm sm:text-base leading-relaxed">
+                Як розподілити гроші, достроково погасити кредити без почуття провини та створити стабільну подушку безпеки за перевіреною японською методологією.
+            </p>
+
+            <!-- Quick Stats / Anchor Badges -->
+            <div class="pt-4 grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+                <a href="#theory" class="p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-amber-400 hover:shadow-md transition group">
+                    <div class="text-amber-700 text-xs font-semibold flex items-center gap-1">01 · База <i data-lucide="arrow-right" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"></i></div>
+                    <div class="font-bold text-slate-800 text-sm mt-0.5">Правила Kakeibo</div>
+                </a>
+                <a href="#strategy-test" class="p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-amber-400 hover:shadow-md transition group">
+                    <div class="text-amber-700 text-xs font-semibold flex items-center gap-1">02 · Тест <i data-lucide="arrow-right" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"></i></div>
+                    <div class="font-bold text-slate-800 text-sm mt-0.5">Вибір стратегії</div>
+                </a>
+                <a href="#debt-calc" class="p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-amber-400 hover:shadow-md transition group">
+                    <div class="text-amber-700 text-xs font-semibold flex items-center gap-1">03 · Борги <i data-lucide="arrow-right" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"></i></div>
+                    <div class="font-bold text-slate-800 text-sm mt-0.5">Калькулятор виплат</div>
+                </a>
+                <a href="#budget-calc" class="p-3 bg-white rounded-xl border border-slate-200 shadow-sm hover:border-amber-400 hover:shadow-md transition group">
+                    <div class="text-amber-700 text-xs font-semibold flex items-center gap-1">04 · Конверти <i data-lucide="arrow-right" class="w-3 h-3 group-hover:translate-x-0.5 transition-transform"></i></div>
+                    <div class="font-bold text-slate-800 text-sm mt-0.5">Розподіл доходу</div>
+                </a>
+            </div>
+        </section>
+
+        <!-- SECTION 01: THEORY & PRINCIPLES -->
+        <section id="theory" class="space-y-4 scroll-mt-24">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-bold tracking-wider text-amber-700 uppercase">01 · Твій бюджет</span>
+                    <h2 class="text-2xl font-bold text-slate-900">Заздалегідь виріши, куди підуть гроші</h2>
+                </div>
+                <div class="w-9 h-9 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm">
+                    01
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Can save on -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow transition-shadow relative overflow-hidden">
+                    <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-rose-400 to-amber-400"></div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="w-7 h-7 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
+                            <i data-lucide="scissors" class="w-4 h-4"></i>
+                        </span>
+                        <h3 class="font-bold text-slate-800 text-base">На чому можна легко економити</h3>
+                    </div>
+                    <ul class="space-y-3 text-sm text-slate-600">
+                        <li class="flex items-start gap-2.5">
+                            <span class="text-amber-600 font-bold">☕</span>
+                            <span><strong>Доставка їжі та кав'ярні:</strong> домашні ланчі та кава термокружкою заощаджують до 20-30% щомісяця.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <span class="text-amber-600 font-bold">🛍</span>
+                            <span><strong>Імпульсивні покупки:</strong> введіть правило 48 годин — зачекайте 2 дні перед будь-якою незапланованою покупкою.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <span class="text-amber-600 font-bold">📱</span>
+                            <span><strong>Невикористовувані підписки:</strong> ревізія сервісів, стрімінгів, додатків і спортзалів, якими ви не користуєтесь.</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Cannot cut on -->
+                <div class="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-sm hover:shadow transition-shadow relative overflow-hidden">
+                    <div class="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+                    <div class="flex items-center gap-2 mb-4">
+                        <span class="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        </span>
+                        <h3 class="font-bold text-slate-800 text-base">Недоторканні базові потреби</h3>
+                    </div>
+                    <ul class="space-y-3 text-sm text-slate-600">
+                        <li class="flex items-start gap-2.5">
+                            <span class="text-emerald-600 font-bold">🏠</span>
+                            <span><strong>Житло та комунальні:</strong> вчасна оплата оренди чи іпотеки, комунальних послуг, світла й зв'язку.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <span class="text-emerald-600 font-bold">🛒</span>
+                            <span><strong>Якісні продукти та здоров'я:</strong> здорове харчування та необхідні ліки захищають від майбутніх витрат.</span>
+                        </li>
+                        <li class="flex items-start gap-2.5">
+                            <span class="text-emerald-600 font-bold">📅</span>
+                            <span><strong>Обов'язкові платежі:</strong> регулярні мінімальні виплати за всіма відкритими кредитами для захисту рейтингу.</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Japanese Wisdom Quote Box -->
+            <div class="p-4 bg-amber-50/70 border border-amber-200/60 rounded-xl flex items-center gap-4 text-xs sm:text-sm text-amber-900">
+                <span class="text-2xl">🎋</span>
+                <div>
+                    <strong>Правило Kakeibo (家計簿):</strong> Перш ніж витратити гроші на бажання, запитай себе чотири речі: 
+                    <em>«Чи можу я без цього обійтися?», «Чи маю я на це реальні кошти?», «Де я буду цим користуватися?»</em> та <em>«Як я почуватимуся через місяць?»</em>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 02: STRATEGY TEST -->
+        <section id="strategy-test" class="space-y-4 scroll-mt-24">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-bold tracking-wider text-amber-700 uppercase">02 · Тест і вибір</span>
+                    <h2 class="text-2xl font-bold text-slate-900">Який борг закривати першим?</h2>
+                </div>
+                <div class="w-9 h-9 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm">
+                    02
+                </div>
+            </div>
+
+            <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-sm space-y-6">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50 rounded-xl border border-slate-200/70">
+                    <div class="text-sm text-slate-600">
+                        <span class="font-bold text-slate-800">Дві перевірені світові стратегії:</span>
+                        <div class="mt-1 flex flex-wrap gap-2 text-xs">
+                            <span class="px-2 py-1 rounded bg-sky-100 text-sky-800 font-medium">🏔️ Лавина (Avalanche) — максимум математичної вигоди</span>
+                            <span class="px-2 py-1 rounded bg-indigo-100 text-indigo-800 font-medium">⛄ Снігова куля (Snowball) — максимум швидкої мотивації</span>
+                        </div>
+                    </div>
+                </div>
+
+                <form id="debt-strategy-form" class="space-y-6" onsubmit="event.preventDefault(); checkTest();">
+                    <!-- Q1 -->
+                    <div class="space-y-2.5">
+                        <p class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-xs flex items-center justify-center font-bold">1</span>
+                            Що для тебе зараз психологічно важливіше?
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <label class="radio-card flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition text-sm">
+                                <input type="radio" name="q1" value="avalanche" class="mt-1 text-amber-600 focus:ring-amber-500">
+                                <span><strong>Скоротити переплату відсотків</strong>, навіть якщо перший борг закриватиметься довше</span>
+                            </label>
+                            <label class="radio-card flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition text-sm">
+                                <input type="radio" name="q1" value="snowball" class="mt-1 text-amber-600 focus:ring-amber-500">
+                                <span><strong>Швидше закрити один будь-який борг</strong> і побачити першу відчутну перемогу</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Q2 -->
+                    <div class="space-y-2.5">
+                        <p class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-xs flex items-center justify-center font-bold">2</span>
+                            Що більше допомагає тобі продовжувати щомісяця?
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <label class="radio-card flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition text-sm">
+                                <input type="radio" name="q2" value="avalanche" class="mt-1 text-amber-600 focus:ring-amber-500">
+                                <span>Усвідомлення, що я зменшую <strong>найдорожчі грабіжницькі борги</strong></span>
+                            </label>
+                            <label class="radio-card flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition text-sm">
+                                <input type="radio" name="q2" value="snowball" class="mt-1 text-amber-600 focus:ring-amber-500">
+                                <span>Фізичне відчуття радості, коли я <strong>повністю викреслюю рядок зі списку</strong></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Q3 -->
+                    <div class="space-y-2.5">
+                        <p class="font-bold text-slate-800 text-sm sm:text-base flex items-center gap-2">
+                            <span class="w-5 h-5 rounded-full bg-slate-200 text-slate-700 text-xs flex items-center justify-center font-bold">3</span>
+                            Якщо найдорожчий за відсотками кредит — це дуже велика сума...
+                        </p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                            <label class="radio-card flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition text-sm">
+                                <input type="radio" name="q3" value="avalanche" class="mt-1 text-amber-600 focus:ring-amber-500">
+                                <span>Я готовий(а) дисципліновано гасити його, щоб <strong>заощадити максимум грошей</strong></span>
+                            </label>
+                            <label class="radio-card flex items-start gap-3 p-3.5 rounded-xl border border-slate-200 cursor-pointer hover:border-amber-400 hover:bg-amber-50/30 transition text-sm">
+                                <input type="radio" name="q3" value="snowball" class="mt-1 text-amber-600 focus:ring-amber-500">
+                                <span>Мені легше спочатку <strong>розправитися з дрібними</strong>, щоб звільнити розум і ресурси</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full sm:w-auto px-8 py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2">
+                        <i data-lucide="check-circle" class="w-5 h-5 text-amber-400"></i>
+                        Отримати персональну рекомендацію
+                    </button>
+                </form>
+
+                <div id="test-result" class="hidden p-5 rounded-xl transition-all border-l-4"></div>
+            </div>
+        </section>
+
+        <!-- SECTION 03: ADVANCED DEBT CALCULATOR -->
+        <section id="debt-calc" class="space-y-4 scroll-mt-24">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-bold tracking-wider text-amber-700 uppercase">03 · Калькулятор боргів</span>
+                    <h2 class="text-2xl font-bold text-slate-900">Розрахуй точний термін погашення</h2>
+                </div>
+                <div class="w-9 h-9 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm">
+                    03
+                </div>
+            </div>
+
+            <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-sm space-y-6">
+                <p class="text-sm text-slate-600">
+                    Додайте ваші кредити, кредитні картки чи розстрочки. Вкажіть вільну суму, яку готові додавати поверх мінімальних платежів — і побачите, на скільки місяців та сотень <span class="curr-symbol">₼</span> ви випередите банк!
+                </p>
+
+                <!-- Debts Form List Container -->
+                <div id="debts-list" class="space-y-4">
+                    <!-- Debt items injected by JS -->
+                </div>
+
+                <!-- Add Debt Button -->
+                <button type="button" onclick="addDebtItem()" class="w-full py-3 border-2 border-dashed border-slate-300 hover:border-amber-500 text-slate-700 hover:text-amber-800 hover:bg-amber-50/50 rounded-xl font-semibold text-sm transition flex items-center justify-center gap-2">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    Додати ще один кредит / позику
+                </button>
+
+                <!-- Additional Payment & Strategy Controls -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <!-- Extra Payment -->
+                    <div class="p-4 bg-sky-50/60 rounded-xl border border-sky-200/80 space-y-2">
+                        <label for="extra-pay" class="block text-xs font-bold text-sky-900 uppercase tracking-wide">
+                            Додатково до мін. платежів (<span class="curr-symbol">₼</span>/місяць)
+                        </label>
+                        <div class="relative">
+                            <input type="number" id="extra-pay" value="150" min="0" step="10" class="w-full pl-3 pr-10 py-2.5 bg-white border border-sky-300 rounded-lg text-slate-900 font-bold text-lg focus:outline-none focus:ring-2 focus:ring-sky-500 shadow-sm">
+                            <span class="curr-symbol absolute right-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400">₼</span>
+                        </div>
+                        <p class="text-[11px] text-sky-700 leading-tight">
+                            Сума з вільного бюджету, яка відправляється на дострокове гасіння пріоритетного боргу.
+                        </p>
+                    </div>
+
+                    <!-- Strategy Picker -->
+                    <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-2">
+                        <label for="strategy" class="block text-xs font-bold text-slate-800 uppercase tracking-wide">
+                            Стратегія розрахунку
+                        </label>
+                        <div class="relative">
+                            <select id="strategy" class="w-full pl-3 pr-10 py-2.5 bg-white border border-slate-300 rounded-lg text-slate-900 font-bold text-base focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm">
+                                <option value="snowball">⛄ Снігова куля (від найменшого залишку)</option>
+                                <option value="avalanche">🏔️ Лавина (від найвищої ставки %)</option>
+                                <option value="compare">⚖️ Порівняти обидві стратегії одночасно</option>
+                            </select>
+                            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+                        </div>
+                        <p class="text-[11px] text-slate-500 leading-tight">
+                            Оберіть одну або порівняйте вигоду обох підходів на єдиному графіку.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Run Calculation Button -->
+                <button type="button" onclick="calcDebts()" class="w-full py-4 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-extrabold rounded-xl shadow-lg shadow-amber-900/10 hover:shadow-xl transition-all flex items-center justify-center gap-2 text-base">
+                    <i data-lucide="calculator" class="w-5 h-5"></i>
+                    Розрахувати план погашення
+                </button>
+
+                <!-- Calculation Result Container -->
+                <div id="debt-result" class="hidden space-y-4 pt-2">
+                    <!-- Injected by calculate function -->
+                </div>
+
+                <!-- Debt Payoff Chart Canvas -->
+                <div id="debt-chart-container" class="hidden bg-slate-50 p-4 sm:p-6 rounded-xl border border-slate-200 space-y-3">
+                    <div class="flex items-center justify-between">
+                        <h4 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                            <i data-lucide="trending-down" class="w-4 h-4 text-emerald-600"></i>
+                            Динаміка зниження загального боргу за місяцями
+                        </h4>
+                        <span class="text-xs text-slate-400">Графік виплат</span>
+                    </div>
+                    <div class="h-64 sm:h-72 w-full">
+                        <canvas id="debtChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 04: BUDGET DISTRIBUTION -->
+        <section id="budget-calc" class="space-y-4 scroll-mt-24">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-bold tracking-wider text-amber-700 uppercase">04 · Розкласти гроші</span>
+                    <h2 class="text-2xl font-bold text-slate-900">Розклади свій місячний бюджет</h2>
+                </div>
+                <div class="w-9 h-9 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm">
+                    04
+                </div>
+            </div>
+
+            <div class="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200/90 shadow-sm space-y-8">
+                <!-- Step 1: Incomes & Fixed Expenses -->
+                <div class="space-y-4">
+                    <div class="flex items-center gap-2 border-b border-slate-100 pb-2">
+                        <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-800 text-xs font-bold flex items-center justify-center">1</span>
+                        <h3 class="font-bold text-slate-800 text-lg">Доходи та фіксовані зобов'язання</h3>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label for="inc1" class="block text-xs font-semibold text-slate-600 mb-1">Перше надходження (зарплата / дохід 1)</label>
+                            <div class="relative">
+                                <input type="number" id="inc1" value="800" min="0" class="budget-input w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <span class="curr-symbol absolute right-3 top-1/2 -translate-y-1/2 font-semibold text-slate-400">₼</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="inc2" class="block text-xs font-semibold text-slate-600 mb-1">Друге надходження (аванс / підробіток)</label>
+                            <div class="relative">
+                                <input type="number" id="inc2" value="400" min="0" class="budget-input w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <span class="curr-symbol absolute right-3 top-1/2 -translate-y-1/2 font-semibold text-slate-400">₼</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="needs" class="block text-xs font-semibold text-slate-600 mb-1">Необхідне на місяць (оренда, їжа, рахунки)</label>
+                            <div class="relative">
+                                <input type="number" id="needs" value="700" min="0" class="budget-input w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <span class="curr-symbol absolute right-3 top-1/2 -translate-y-1/2 font-semibold text-slate-400">₼</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label for="goal" class="block text-xs font-semibold text-slate-600 mb-1">Щомісяця на ціль / борги / заощадження</label>
+                            <div class="relative">
+                                <input type="number" id="goal" value="150" min="0" class="budget-input w-full pl-3 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-lg text-slate-900 font-bold focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500">
+                                <span class="curr-symbol absolute right-3 top-1/2 -translate-y-1/2 font-semibold text-slate-400">₼</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Calculated Remainder Live Banner -->
+                    <div id="remainder-banner" class="p-3 bg-amber-50 rounded-xl border border-amber-200 flex items-center justify-between text-xs sm:text-sm">
+                        <span class="text-amber-900">Загальний дохід: <strong id="live-total-inc">1 200 ₼</strong> | Залишок після бази й цілей:</span>
+                        <strong id="live-remainder" class="text-base text-amber-900 font-bold">350 ₼</strong>
+                    </div>
+                </div>
+
+                <!-- Step 2: Percentage Allocation -->
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-amber-100 text-amber-800 text-xs font-bold flex items-center justify-center">2</span>
+                            <h3 class="font-bold text-slate-800 text-lg">Розподіл вільного залишку (%)</h3>
+                        </div>
+                        <div id="pct-badge" class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                            Всього: <span id="pct-total">100</span>%
+                        </div>
+                    </div>
+                    <p class="text-xs text-slate-500">
+                        Розділіть вільні кошти між бажаннями, особистим розвитком та подушкою безпеки на непередбачувані витрати. Сума має бути рівно 100%.
+                    </p>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <!-- Wants % -->
+                        <div class="p-4 bg-rose-50/50 rounded-xl border border-rose-200/80 space-y-2">
+                            <div class="flex justify-between items-center text-xs font-bold text-rose-900">
+                                <span>🛍 Бажання</span>
+                                <span id="p_wants_val">40%</span>
+                            </div>
+                            <input type="range" id="p_wants" min="0" max="100" value="40" step="5" class="w-full accent-rose-500 cursor-pointer" oninput="syncPercentages('p_wants')">
+                            <div class="flex justify-between text-[11px] text-rose-700">
+                                <span>Розваги, шопінг</span>
+                                <span id="wants-est" class="font-semibold">140 ₼</span>
+                            </div>
+                        </div>
+
+                        <!-- Growth % -->
+                        <div class="p-4 bg-emerald-50/50 rounded-xl border border-emerald-200/80 space-y-2">
+                            <div class="flex justify-between items-center text-xs font-bold text-emerald-900">
+                                <span>🌱 Розвиток</span>
+                                <span id="p_dev_val">20%</span>
+                            </div>
+                            <input type="range" id="p_dev" min="0" max="100" value="20" step="5" class="w-full accent-emerald-600 cursor-pointer" oninput="syncPercentages('p_dev')">
+                            <div class="flex justify-between text-[11px] text-emerald-700">
+                                <span>Книги, спорт, курси</span>
+                                <span id="dev-est" class="font-semibold">70 ₼</span>
+                            </div>
+                        </div>
+
+                        <!-- Unexpected % -->
+                        <div class="p-4 bg-sky-50/50 rounded-xl border border-sky-200/80 space-y-2">
+                            <div class="flex justify-between items-center text-xs font-bold text-sky-900">
+                                <span>🛡️ Непередбачуване</span>
+                                <span id="p_unexp_val">40%</span>
+                            </div>
+                            <input type="range" id="p_unexp" min="0" max="100" value="40" step="5" class="w-full accent-sky-600 cursor-pointer" oninput="syncPercentages('p_unexp')">
+                            <div class="flex justify-between text-[11px] text-sky-700">
+                                <span>Фонд форс-мажорів</span>
+                                <span id="unexp-est" class="font-semibold">140 ₼</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Presets Buttons -->
+                    <div class="flex flex-wrap items-center gap-2 pt-1 text-xs">
+                        <span class="text-slate-400 font-medium">Швидкі пресети:</span>
+                        <button type="button" onclick="applyPreset(40, 20, 40)" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Збалансований (40 / 20 / 40)</button>
+                        <button type="button" onclick="applyPreset(30, 20, 50)" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Ощадливий (30 / 20 / 50)</button>
+                        <button type="button" onclick="applyPreset(50, 30, 20)" class="px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 transition">Активний (50 / 30 / 20)</button>
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="button" onclick="calculateBudget()" class="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-extrabold rounded-xl shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 text-base">
+                    <i data-lucide="layers" class="w-5 h-5 text-amber-400"></i>
+                    Розкласти гроші по японських конвертах
+                </button>
+
+                <div id="calc-error" class="hidden p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-sm font-semibold text-center">
+                    ⚠️ Сума відсотків повинна дорівнювати рівно 100%! Зараз: <span id="calc-error-total"></span>%
+                </div>
+            </div>
+        </section>
+
+        <!-- SECTION 05: THE ENVELOPES (RESULTS) -->
+        <section id="envelopes-view" class="space-y-4 scroll-mt-24">
+            <div class="flex items-center justify-between">
+                <div>
+                    <span class="text-xs font-bold tracking-wider text-amber-700 uppercase">05 · Результат розподілу</span>
+                    <h2 class="text-2xl font-bold text-slate-900">Твої японські конверти</h2>
+                </div>
+                <div class="w-9 h-9 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-sm">
+                    05
+                </div>
+            </div>
+
+            <!-- Envelope Cards Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+
+                <!-- Envelope 1: Needs -->
+                <div class="envelope-card group relative bg-gradient-to-b from-[#FAF4EC] to-[#F1E5D5] p-6 rounded-2xl border-2 border-[#D9C4AB] shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer" onclick="toggleEnvelope(1)">
+                    <div class="absolute top-3 right-4 font-serif text-2xl font-bold text-[#9C7043]/30 select-none">基本</div>
+                    <div class="space-y-3">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E5D2BA] text-[#7A4E23] text-xs font-bold">
+                            <span>🏠</span> Конверт 1
+                        </div>
+                        <h3 class="font-extrabold text-xl text-[#5A3816] tracking-tight">Необхідне</h3>
+                        <p class="text-xs text-[#7D5B3A] leading-relaxed">
+                            Оренда, комуналка, базові харчі, проїзд, обов'язкові платежі.
+                        </p>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-[#D9C4AB]/70 space-y-2">
+                        <div class="text-xs text-[#8C6B4A] font-semibold">Місячний ліміт:</div>
+                        <div id="env1-amt" class="text-2xl sm:text-3xl font-extrabold text-[#5A3816] tracking-tight">
+                            700 <span class="curr-symbol text-lg">₼</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 text-[11px] text-[#7D5B3A] pt-1">
+                            <div>~<span id="env1-week">163</span> <span class="curr-symbol">₼</span>/тижд.</div>
+                            <div>~<span id="env1-day">23</span> <span class="curr-symbol">₼</span>/день</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Envelope 2: Wants -->
+                <div class="envelope-card group relative bg-gradient-to-b from-[#FDF2F4] to-[#F8DCE0] p-6 rounded-2xl border-2 border-[#E9B5BC] shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer" onclick="toggleEnvelope(2)">
+                    <div class="absolute top-3 right-4 font-serif text-2xl font-bold text-[#B05B68]/30 select-none">娯楽</div>
+                    <div class="space-y-3">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#ECC3CA] text-[#863743] text-xs font-bold">
+                            <span>🛍</span> Конверт 2
+                        </div>
+                        <h3 class="font-extrabold text-xl text-[#712A34] tracking-tight">Бажання</h3>
+                        <p class="text-xs text-[#8E4954] leading-relaxed">
+                            Кафе, розваги, спонтанні приємності, новий одяг і відпочинок.
+                        </p>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-[#E9B5BC]/70 space-y-2">
+                        <div class="text-xs text-[#9B515C] font-semibold">Місячний ліміт:</div>
+                        <div id="env2-amt" class="text-2xl sm:text-3xl font-extrabold text-[#712A34] tracking-tight">
+                            140 <span class="curr-symbol text-lg">₼</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 text-[11px] text-[#8E4954] pt-1">
+                            <div>~<span id="env2-week">33</span> <span class="curr-symbol">₼</span>/тижд.</div>
+                            <div>~<span id="env2-day">5</span> <span class="curr-symbol">₼</span>/день</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Envelope 3: Development -->
+                <div class="envelope-card group relative bg-gradient-to-b from-[#F2F7F3] to-[#DCEADF] p-6 rounded-2xl border-2 border-[#BAD5C0] shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer" onclick="toggleEnvelope(3)">
+                    <div class="absolute top-3 right-4 font-serif text-2xl font-bold text-[#4B7356]/30 select-none">成長</div>
+                    <div class="space-y-3">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#C8E1CE] text-[#34593E] text-xs font-bold">
+                            <span>🌱</span> Конверт 3
+                        </div>
+                        <h3 class="font-extrabold text-xl text-[#26452E] tracking-tight">Розвиток</h3>
+                        <p class="text-xs text-[#44664C] leading-relaxed">
+                            Книги, курси, тренування, розвиток навичок і культурні заходи.
+                        </p>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-[#BAD5C0]/70 space-y-2">
+                        <div class="text-xs text-[#52775B] font-semibold">Місячний ліміт:</div>
+                        <div id="env3-amt" class="text-2xl sm:text-3xl font-extrabold text-[#26452E] tracking-tight">
+                            70 <span class="curr-symbol text-lg">₼</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 text-[11px] text-[#44664C] pt-1">
+                            <div>~<span id="env3-week">16</span> <span class="curr-symbol">₼</span>/тижд.</div>
+                            <div>~<span id="env3-day">2</span> <span class="curr-symbol">₼</span>/день</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Envelope 4: Unexpected -->
+                <div class="envelope-card group relative bg-gradient-to-b from-[#F1F6F9] to-[#D8E6EE] p-6 rounded-2xl border-2 border-[#ADC9D9] shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between cursor-pointer" onclick="toggleEnvelope(4)">
+                    <div class="absolute top-3 right-4 font-serif text-2xl font-bold text-[#3B667D]/30 select-none">備え</div>
+                    <div class="space-y-3">
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#C3DAE7] text-[#26485B] text-xs font-bold">
+                            <span>🛡️</span> Конверт 4
+                        </div>
+                        <h3 class="font-extrabold text-xl text-[#1B3746] tracking-tight">Непередбачуване</h3>
+                        <p class="text-xs text-[#365A6E] leading-relaxed">
+                            Дрібний ремонт техніки, стоматолог, ліки, подарунки на свята.
+                        </p>
+                    </div>
+
+                    <div class="mt-6 pt-4 border-t border-[#ADC9D9]/70 space-y-2">
+                        <div class="text-xs text-[#486F85] font-semibold">Місячний ліміт:</div>
+                        <div id="env4-amt" class="text-2xl sm:text-3xl font-extrabold text-[#1B3746] tracking-tight">
+                            140 <span class="curr-symbol text-lg">₼</span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-1 text-[11px] text-[#365A6E] pt-1">
+                            <div>~<span id="env4-week">33</span> <span class="curr-symbol">₼</span>/тижд.</div>
+                            <div>~<span id="env4-day">5</span> <span class="curr-symbol">₼</span>/день</div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Envelope 5 / Goal / Debt Badge Summary -->
+            <div class="p-5 bg-amber-50/80 rounded-2xl border border-amber-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div class="flex items-center gap-3">
+                    <span class="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold text-xl shadow-sm">🎯</span>
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-sm">Скаррбничка цілей та погашення боргів:</h4>
+                        <p class="text-xs text-slate-600">Сума, що гарантовано йде на твоє фінансове майбутнє щомісяця.</p>
+                    </div>
+                </div>
+                <div class="text-xl sm:text-2xl font-extrabold text-amber-900 bg-white px-5 py-2.5 rounded-xl border border-amber-300 shadow-sm">
+                    <span id="env-goal-amt">150</span> <span class="curr-symbol">₼</span>
+                </div>
+            </div>
+
+            <!-- Visual Budget Doughnut Chart -->
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col md:flex-row items-center gap-8">
+                <div class="w-48 h-48 relative flex-shrink-0">
+                    <canvas id="budgetDoughnut"></canvas>
+                </div>
+                <div class="space-y-2 text-sm w-full">
+                    <h4 class="font-bold text-slate-800 text-base">Структура розподілу твого доходу</h4>
+                    <p class="text-xs text-slate-500 pb-2">
+                        Діаграма відображає співвідношення всіх п'яти напрямків бюджету.
+                    </p>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-[#C58958]"></span>
+                            <span class="text-slate-700">Базові: <strong id="chart-pct-needs">58%</strong></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-[#D6942C]"></span>
+                            <span class="text-slate-700">Ціль/Борги: <strong id="chart-pct-goal">13%</strong></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-[#D87A89]"></span>
+                            <span class="text-slate-700">Бажання: <strong id="chart-pct-wants">12%</strong></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-[#5B8C67]"></span>
+                            <span class="text-slate-700">Розвиток: <strong id="chart-pct-dev">6%</strong></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-[#477C98]"></span>
+                            <span class="text-slate-700">Резерв: <strong id="chart-pct-unexp">12%</strong></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-16 border-t border-slate-200 bg-white py-8 text-center text-xs text-slate-500">
+        <div class="max-w-5xl mx-auto px-4 space-y-3">
+            <div class="flex justify-center items-center gap-2 font-serif text-slate-700">
+                <span>家計簿</span>
+                <span>•</span>
+                <span class="font-sans font-bold">Kakeibo Envelope & Debt Planner</span>
+            </div>
+            <p>Усі розрахунки відбуваються локально у вашому браузері — ваші фінансові дані на 100% приватні.</p>
+            <div class="flex justify-center gap-4 text-slate-400 pt-1">
+                <span>Японський метод Kakeibo</span>
+                <span>•</span>
+                <span>Стратегії Snowball & Avalanche</span>
+                <span>•</span>
+                <span>Автозбереження</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="app.js"></script>
+</body>
+</html>
